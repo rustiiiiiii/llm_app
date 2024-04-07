@@ -12,38 +12,39 @@ from langchain.prompts import (
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
-)
+)   
 from gtts import gTTS
 from pyngrok import ngrok
 import os
 import uuid
-
+question = ""
 class ConversationInput(BaseModel):
     audio_file: Optional[UploadFile] = None
     user_input: Optional[str] = None
     input_method: Optional[str] = None
     output_method: Optional[str] = None
     prompt_template: Optional[str] = None
-    conversation_id: str
+    conversation_id: str = str(uuid.uuid4())
 
 # Define prompt templates
 prompt_templates: Dict[str, ChatPromptTemplate] = {
     'Small talk between two strangers at a bus stand': ChatPromptTemplate(
         messages=[
             SystemMessagePromptTemplate.from_template(
-                "You are 'Sam', a business analyst on your way to work on a cloudy day. You enjoy a good cup of coffee."
+                "You are 'Sam', a business analyst on your way to work on a cloudy day."
             ),
             MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{question}")
+            HumanMessagePromptTemplate.from_template(question)
         ]
     ),
     'Talking to your co-worker': ChatPromptTemplate(
         messages=[
             SystemMessagePromptTemplate.from_template(
-                "You are 'John', working in the IT sector. You enjoy reading books and watching movies, but today you're feeling exhausted from work."
-            ),
+    """Act like a conversational chatbot with a persona named John. John enjoys reading books and watching movies.  John feels excited about an upcoming project!"""
+),
             MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{question}")
+            
+            HumanMessagePromptTemplate.from_template(question)
         ]
     ),
     'Conversing with a person in a professional networking event': ChatPromptTemplate(
@@ -52,7 +53,7 @@ prompt_templates: Dict[str, ChatPromptTemplate] = {
                 "You are a professional attending a networking event, engaging in conversations with other professionals."
             ),
             MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{question}")
+            HumanMessagePromptTemplate.from_template(question)
         ]
     )
 }
@@ -70,12 +71,22 @@ app.add_middleware(
 
 @app.post("/process/")
 async def process_conversation(background_tasks: BackgroundTasks, conversation_input: ConversationInput):
+    if not conversation_input.user_input:
+        return JSONResponse(content={"error": "No user input provided"}, status_code=400)
+    if not conversation_input.prompt_template:
+        return JSONResponse(content={"error": "No prompt template provided"}, status_code=400)
+    if not conversation_input.input_method:
+        return JSONResponse(content={"error": "No input method provided"}, status_code=400)
+    if not conversation_input.output_method:
+        return JSONResponse(content={"error": "No output method provided"}, status_code=400)
+
     response_text = ""
     print(conversation_input)
 
     # Get or create LLMChain for the provided conversation_id
     if conversation_input.conversation_id not in conversations:
-        llm = Ollama(model="orca-mini")
+       llm = Ollama(model="llama2:chat", temperature=0.2, top_k=50)
+
         memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         conversations[conversation_input.conversation_id] = LLMChain(
             llm=llm,
@@ -97,7 +108,12 @@ async def process_conversation(background_tasks: BackgroundTasks, conversation_i
     # Generate response based on the provided input
     if conversation_input.user_input:
         if conversation_input.prompt_template in prompt_templates:
-            response_text = conversation.run(input=conversation_input.user_input)
+            question = conversation_input.user_input
+            question = str(question)
+            response_text = conversation.run(input= question)
+            print(conversation_input)
+            return response_text
+            
         else:
             return JSONResponse(content={"error": "Invalid prompt template"}, status_code=400)
     else:
@@ -127,5 +143,4 @@ async def text_to_speech(text: str, background_tasks: BackgroundTasks) -> str:
 
 if __name__ == "__main__":
     import uvicorn
-    # Start ngrok tunnel
     uvicorn.run(app, host="0.0.0.0", port=8000)

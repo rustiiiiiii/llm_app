@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Conversation Interface</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app">
+        <select id="scenarioSelector">
+            <option value="Small talk between two strangers at a bus stand">Small talk at a bus stand</option>
+            <option value="Talking to your co-worker">Talking to a co-worker</option>
+            <option value="Conversing with a person in a professional networking event">Networking event conversation
+            </option>
+        </select>
+        <textarea id="userInput" placeholder="Enter your message here..."></textarea>
+        <button id="submitBtn">Submit</button>
+        <p id="responseOutput"></p> <!-- New element to display the response -->
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
